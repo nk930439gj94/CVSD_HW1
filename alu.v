@@ -34,21 +34,27 @@ reg                 o_overflow_w, o_overflow_r;
 // ---- Add your own wires and registers here if needed ---- //
 
 wire [  DATA_W  :0] add_result;
+wire                add_overflow;
+
 wire [  DATA_W  :0] sub_result;
+wire                sub_overflow;
+
 wire [2*DATA_W-1:0] mul_result_temp;
 wire [2*INST_W+FRAC_W-1:0] mul_result;
+wire                mul_carryin;
+wire                mul_overflow;
+
 wire [  DATA_W-1:0] or_result;
 wire [  DATA_W-1:0] xor_result;
 wire [  DATA_W-1:0] relu_result;
+
+wire [  DATA_W-1:0] mean_result_temp;
 wire [  DATA_W-1:0] mean_result;
+wire                mean_carryin;
+
 wire [  DATA_W-1:0] min_result;
 
-wire                add_overflow;
-wire                sub_overflow;
-wire                mul_overflow;
 
-wire                mul_carryin;
-wire                mean_carryin;
 
 
 // ---------------------------------------------------------------------------
@@ -68,7 +74,7 @@ assign sub_overflow = sub_result[DATA_W] ^ sub_result[DATA_W-1];
 assign mul_result_temp = {{DATA_W{i_data_a[DATA_W-1]}}, i_data_a} * {{DATA_W{i_data_b[DATA_W-1]}}, i_data_b};
 assign mul_carryin  = mul_result_temp[FRAC_W-1];
 assign mul_result = mul_result_temp[2*DATA_W-1:FRAC_W] + {{(2*INST_W+FRAC_W-1)'b0}, mul_carryin};
-assign mul_overflow = ~( ~|mul_result[2*DATA_W-1:2*DATA_W-INT_W-1] | &mul_result[2*DATA_W-1:2*DATA_W-INT_W-1] );
+assign mul_overflow = ~( ~|mul_result[2*INST_W+FRAC_W+-1:DATA_W-1] | &mul_result[2*INST_W+FRAC_W+-1:DATA_W-1] );
 
 assign or_result    = i_data_a | i_data_b;
 
@@ -76,8 +82,9 @@ assign xor_result   = i_data_a ^ i_data_b;
 
 assign relu_result  = i_data_a[DATA_W-1] ? DATA_W'b0 : i_data_a;
 
-assign mean_result  = add_result[DATA_W:1];
+assign mean_result_temp  = add_result[DATA_W:1];
 assign mean_carryin = add_result[0];
+assign mean_result = mean_result_temp + {{(DATA_W-1)'b0}, mean_carryin};
 
 assign min_result   = (i_data_a < i_data_b) ? i_data_a : i_data_b;
 
@@ -99,24 +106,34 @@ always@(*) begin
             o_valid_w = 1'b1;
         end
         OP_MUL: begin
-            // o_data_w = mul_result[INT_W + 2*FRAC_W - 1: FRAC_W];
-            o_overflow_w = ;
+            o_data_w = mul_result[DATA_W-1:0];
+            o_overflow_w = mul_overflow;
             o_valid_w = 1'b1;
         end
         OP_OR: begin
-            
+            o_data_w = or_result;
+            o_overflow_w = 1'b0;
+            o_valid_w = 1'b1;
         end
         OP_XOR: begin
-            
+            o_data_w = xor_result;
+            o_overflow_w = 1'b0;
+            o_valid_w = 1'b1;
         end
         OP_RELU: begin
-            
+            o_data_w = relu_result;
+            o_overflow_w = 1'b0;
+            o_valid_w = 1'b1;
         end
         OP_MEAN: begin
-            
+            o_data_w = mean_result;
+            o_overflow_w = 1'b0;
+            o_valid_w = 1'b1;
         end
         OP_MIN: begin
-            
+            o_data_w = min_result;
+            o_overflow_w = 1'b0;
+            o_valid_w = 1'b1;
         end
     endcase
 end
