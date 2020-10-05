@@ -35,7 +35,8 @@ reg                 o_overflow_w, o_overflow_r;
 
 wire [  DATA_W  :0] add_result;
 wire [  DATA_W  :0] sub_result;
-wire [2*DATA_W-1:0] mul_result;
+wire [2*DATA_W-1:0] mul_result_temp;
+wire [2*INST_W+FRAC_W-1:0] mul_result;
 wire [  DATA_W-1:0] or_result;
 wire [  DATA_W-1:0] xor_result;
 wire [  DATA_W-1:0] relu_result;
@@ -58,15 +59,16 @@ assign o_data = o_data_r;
 assign o_overflow = o_overflow_r;
 // ---- Add your own wire data assignments here if needed ---- //
 
-assign add_result   = {i_data_a[DATA_W-1], i_data_a} + {i_data_b[DATA_W-1], i_data_b};
+assign add_result = {i_data_a[DATA_W-1], i_data_a} + {i_data_b[DATA_W-1], i_data_b};
 assign add_overflow = add_result[DATA_W] ^ add_result[DATA_W-1];
 
-assign sub_result   = {i_data_a[DATA_W-1], i_data_a} - {i_data_b[DATA_W-1], i_data_b};
+assign sub_result = {i_data_a[DATA_W-1], i_data_a} - {i_data_b[DATA_W-1], i_data_b};
 assign sub_overflow = sub_result[DATA_W] ^ sub_result[DATA_W-1];
 
-assign mul_result   = {{DATA_W{i_data_a[DATA_W-1]}}, i_data_a} * {{DATA_W{i_data_b[DATA_W-1]}}, i_data_b};
+assign mul_result_temp = {{DATA_W{i_data_a[DATA_W-1]}}, i_data_a} * {{DATA_W{i_data_b[DATA_W-1]}}, i_data_b};
+assign mul_carryin  = mul_result_temp[FRAC_W-1];
+assign mul_result = mul_result_temp[2*DATA_W-1:FRAC_W] + {{(2*INST_W+FRAC_W-1)'b0}, mul_carryin};
 assign mul_overflow = ~( ~|mul_result[2*DATA_W-1:2*DATA_W-INT_W-1] | &mul_result[2*DATA_W-1:2*DATA_W-INT_W-1] );
-assign mul_carryin  = sub_result[FRAC_W];
 
 assign or_result    = i_data_a | i_data_b;
 
@@ -97,7 +99,7 @@ always@(*) begin
             o_valid_w = 1'b1;
         end
         OP_MUL: begin
-            o_data_w = mul_result[INT_W + 2*FRAC_W - 1: FRAC_W];
+            // o_data_w = mul_result[INT_W + 2*FRAC_W - 1: FRAC_W];
             o_overflow_w = ;
             o_valid_w = 1'b1;
         end
