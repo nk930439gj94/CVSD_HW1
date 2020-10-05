@@ -48,9 +48,7 @@ wire [  DATA_W-1:0] or_result;
 wire [  DATA_W-1:0] xor_result;
 wire [  DATA_W-1:0] relu_result;
 
-wire [  DATA_W-1:0] mean_result_temp;
 wire [  DATA_W-1:0] mean_result;
-wire                mean_carryin;
 
 wire [  DATA_W-1:0] min_result;
 
@@ -73,18 +71,16 @@ assign sub_overflow = sub_result[DATA_W] ^ sub_result[DATA_W-1];
 
 assign mul_result_temp = {{DATA_W{i_data_a[DATA_W-1]}}, i_data_a} * {{DATA_W{i_data_b[DATA_W-1]}}, i_data_b};
 assign mul_carryin  = mul_result_temp[FRAC_W-1];
-assign mul_result = mul_result_temp[2*DATA_W-1:FRAC_W] + {{(2*INST_W+FRAC_W-1)'b0}, mul_carryin};
+assign mul_result = mul_result_temp[2*DATA_W-1:FRAC_W] + {{2*INST_W+FRAC_W-1{1'b0}}, mul_carryin};
 assign mul_overflow = ~( ~|mul_result[2*INST_W+FRAC_W+-1:DATA_W-1] | &mul_result[2*INST_W+FRAC_W+-1:DATA_W-1] );
 
 assign or_result    = i_data_a | i_data_b;
 
 assign xor_result   = i_data_a ^ i_data_b;
 
-assign relu_result  = i_data_a[DATA_W-1] ? DATA_W'b0 : i_data_a;
+assign relu_result  = i_data_a[DATA_W-1] ? {DATA_W{1'b0}} : i_data_a;
 
-assign mean_result_temp  = add_result[DATA_W:1];
-assign mean_carryin = add_result[0];
-assign mean_result = mean_result_temp + {{(DATA_W-1)'b0}, mean_carryin};
+assign mean_result = add_result[DATA_W:1];
 
 assign min_result   = (i_data_a < i_data_b) ? i_data_a : i_data_b;
 
